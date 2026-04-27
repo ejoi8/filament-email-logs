@@ -1,0 +1,45 @@
+{
+    "name": "ejoi8/filament-email-logs",
+    "type": "library",
+    "description": "Email log viewer and resend tools for Filament panels.",
+    "homepage": "https://github.com/ejoi8/filament-email-logs",
+    "keywords": ["laravel", "filament", "email", "mail", "logs"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "ejoi8",
+            "email": "ejoi8@example.com"
+        }
+    ],
+    "require": {
+        "php": "^8.3",
+        "filament/filament": "^5.4",
+        "illuminate/auth": "^13.0",
+        "illuminate/database": "^13.0",
+        "illuminate/mail": "^13.0",
+        "illuminate/support": "^13.0",
+        "illuminate/view": "^13.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Ejoi8\\FilamentEmailLogs\\": "src/",
+            "Ejoi8\\FilamentEmailLogs\\Database\\Factories\\": "database/factories/"
+        }
+    },
+    "support": {
+        "issues": "https://github.com/ejoi8/filament-email-logs/issues",
+        "source": "https://github.com/ejoi8/filament-email-logs"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Ejoi8\\FilamentEmailLogs\\FilamentEmailLogsServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "config": {
+        "sort-packages": true
+    }
+}
