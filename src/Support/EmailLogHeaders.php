@@ -12,6 +12,8 @@ class EmailLogHeaders
 
     public const RESEND_NOTE = 'X-Email-Log-Resend-Note';
 
+    public const TENANT_ID = 'X-Email-Log-Tenant-ID';
+
     public static function getInteger(Email $message, string $header): ?int
     {
         $value = self::getString($message, $header);
@@ -30,5 +32,20 @@ class EmailLogHeaders
         $value = $message->getHeaders()->getHeaderBody($header);
 
         return filled($value) ? trim((string) $value) : null;
+    }
+
+    /**
+     * Return a header value as an int when numeric, otherwise the trimmed
+     * string. Tenant keys may be integers or UUIDs.
+     */
+    public static function getScalar(Email $message, string $header): int|string|null
+    {
+        $value = self::getString($message, $header);
+
+        if ($value === null) {
+            return null;
+        }
+
+        return is_numeric($value) ? (int) $value : $value;
     }
 }

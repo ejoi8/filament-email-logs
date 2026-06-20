@@ -26,6 +26,11 @@
             "Ejoi8\\FilamentEmailLogs\\Database\\Factories\\": "database/factories/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Ejoi8\\FilamentEmailLogs\\Tests\\": "tests/"
+        }
+    },
     "support": {
         "issues": "https://github.com/ejoi8/filament-email-logs/issues",
         "source": "https://github.com/ejoi8/filament-email-logs"
@@ -40,6 +45,13 @@
     "minimum-stability": "dev",
     "prefer-stable": true,
     "config": {
-        "sort-packages": true
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "require-dev": {
+        "orchestra/testbench": "^11.1",
+        "pestphp/pest": "^4.7"
     }
 }

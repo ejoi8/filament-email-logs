@@ -35,6 +35,7 @@ class EmailLogFactory extends Factory
             'last_resent_at' => null,
             'resent_by' => null,
             'resend_note' => null,
+            'tenant_id' => null,
         ];
     }
 }

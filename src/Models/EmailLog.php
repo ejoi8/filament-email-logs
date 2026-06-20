@@ -3,6 +3,7 @@
 namespace Ejoi8\FilamentEmailLogs\Models;
 
 use Ejoi8\FilamentEmailLogs\Database\Factories\EmailLogFactory;
+use Ejoi8\FilamentEmailLogs\Support\EmailLogTenancy;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -26,6 +27,7 @@ use Illuminate\Foundation\Auth\User;
     'last_resent_at',
     'resent_by',
     'resend_note',
+    'tenant_id',
 ])]
 class EmailLog extends Model
 {
@@ -50,6 +52,19 @@ class EmailLog extends Model
     public function resentBy(): BelongsTo
     {
         return $this->belongsTo($this->getUserModelClass(), 'resent_by');
+    }
+
+    /**
+     * The tenant that owns this email log. Only meaningful when multitenancy is
+     * enabled via config('filament-email-logs.tenancy'); the related model and
+     * foreign key are resolved from configuration so the package stays generic.
+     */
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(
+            EmailLogTenancy::tenantModel() ?? self::class,
+            EmailLogTenancy::column(),
+        );
     }
 
     public function fromSummary(): string

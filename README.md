@@ -9,10 +9,12 @@ Filament Email Logs is a Filament v5 plugin for Laravel 13 that records sent ema
 
 - Logs outgoing emails from Laravel's mail system
 - Lists email logs inside a Filament panel
-- Shows HTML and plain-text email content
+- Shows HTML and plain-text email content in preview, plain-text, and raw-source tabs
 - Resends a logged email to the original recipients
 - Resends to corrected recipients when an email address was wrong
 - Tracks resend lineage, resend count, resend note, and resent-by user
+- Optional multitenancy — scope logs per tenant and stamp the owning tenant automatically
+- Filterable, searchable table with delivery-type, date-range filters and copyable recipients
 
 ## Requirements
 
@@ -86,10 +88,17 @@ return [
         'ability' => null,
     ],
 
+    'tenancy' => [
+        'enabled' => false,
+        'model' => null,        // e.g. App\Models\Team::class
+        'column' => 'tenant_id',
+    ],
+
     'navigation' => [
         'group' => 'System',
         'sort' => 1,
         'icon' => Heroicon::OutlinedEnvelope,
+        'badge' => false,       // show a "logged today" count badge
     ],
 ];
 ```
@@ -124,6 +133,10 @@ Controls the navigation order.
 
 Controls the resource navigation icon.
 
+### `navigation.badge`
+
+When `true`, the resource shows a navigation badge with the number of emails logged today.
+
 You can also override navigation directly in the plugin registration:
 
 ```php
@@ -139,6 +152,64 @@ use Filament\Support\Icons\Heroicon;
 ```
 
 Plugin method overrides take priority over the config file.
+
+## Multitenancy
+
+This package supports Filament multitenancy and is safe to use whether or not your panel is multitenant.
+
+By default (`tenancy.enabled => false`) the Email Logs resource is **not** scoped to a tenant, so it renders correctly in any panel — including a multitenant one — and simply shows every log. (Filament's default resource tenant-scoping is intentionally disabled for this resource to avoid a `LogicException`, since the log model has no tenant relationship until you opt in.)
+
+### Enabling per-tenant logs
+
+1. Configure `config/filament-email-logs.php`:
+
+```php
+'tenancy' => [
+    'enabled' => true,
+    'model' => App\Models\Team::class, // your panel's ->tenant() model
+    'column' => 'tenant_id',
+],
+```
+
+2. Add the tenant column by running the migration:
+
+```bash
+php artisan migrate
+```
+
+Once enabled, the resource scopes every query to `Filament::getTenant()`, so each tenant only sees their own logs.
+
+### How the owning tenant is recorded
+
+Emails are logged from Laravel's `MessageSent` listener, which often runs in a **queue worker** where `Filament::getTenant()` is not available. The package therefore resolves the tenant in this order:
+
+1. An `X-Email-Log-Tenant-ID` mail header, if present (it travels with queued mail).
+2. A resolver you register (see below).
+3. `Filament::getTenant()` — works for mail sent synchronously during a tenant request.
+
+For queued mail, register a resolver in a service provider so the tenant is captured reliably:
+
+```php
+use Ejoi8\FilamentEmailLogs\Support\EmailLogTenancy;
+use Filament\Facades\Filament;
+
+EmailLogTenancy::resolveUsing(fn () => Filament::getTenant()?->getKey());
+```
+
+Or stamp the header yourself on a Mailable:
+
+```php
+public function headers(): \Illuminate\Mail\Mailables\Headers
+{
+    return new \Illuminate\Mail\Mailables\Headers(text: [
+        'X-Email-Log-Tenant-ID' => (string) $this->team->getKey(),
+    ]);
+}
+```
+
+Resent emails automatically carry the original log's tenant via this header.
+
+> The migration adds an `unsignedBigInteger` tenant column. If your tenants use UUID keys, publish the migration (`--tag` is set up via `publishesMigrations`) and change the column type to match.
 
 ## How it works
 
@@ -266,9 +337,11 @@ This repository currently consumes the package through a local Composer path rep
 
 ## Testing
 
-Focused verification in this host app:
+The package ships with a [Pest](https://pestphp.com/) test suite that runs against [Orchestra Testbench](https://github.com/orchestral/testbench). Install the dev dependencies and run:
 
 ```bash
-./vendor/bin/pest tests/Feature/EmailLogResourceTest.php tests/Feature/UserRoleAccessTest.php
-vendor/bin/pint --dirty --format agent
+composer install
+./vendor/bin/pest
 ```
+
+`tests/Feature/TenancyTest.php` covers the multitenancy behaviour end to end: tenancy stays disabled by default, only activates once a tenant model is configured, adds the `tenant_id` column, and stamps the owning tenant from a mail header, a registered resolver, or the active Filament tenant.

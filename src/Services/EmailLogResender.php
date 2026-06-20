@@ -4,6 +4,7 @@ namespace Ejoi8\FilamentEmailLogs\Services;
 
 use Ejoi8\FilamentEmailLogs\Models\EmailLog;
 use Ejoi8\FilamentEmailLogs\Support\EmailLogHeaders;
+use Ejoi8\FilamentEmailLogs\Support\EmailLogTenancy;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Mail\Message;
 use Illuminate\Mail\SentMessage;
@@ -81,6 +82,14 @@ class EmailLogResender
 
             if (filled($resendNote)) {
                 $headers->addTextHeader(EmailLogHeaders::RESEND_NOTE, trim((string) $resendNote));
+            }
+
+            if (EmailLogTenancy::enabled()) {
+                $tenantKey = $emailLog->{EmailLogTenancy::column()};
+
+                if (filled($tenantKey)) {
+                    $headers->addTextHeader(EmailLogHeaders::TENANT_ID, (string) $tenantKey);
+                }
             }
         });
 

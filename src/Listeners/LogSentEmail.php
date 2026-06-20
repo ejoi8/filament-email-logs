@@ -4,6 +4,7 @@ namespace Ejoi8\FilamentEmailLogs\Listeners;
 
 use Ejoi8\FilamentEmailLogs\Models\EmailLog;
 use Ejoi8\FilamentEmailLogs\Support\EmailLogHeaders;
+use Ejoi8\FilamentEmailLogs\Support\EmailLogTenancy;
 use Illuminate\Mail\Events\MessageSent;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
@@ -35,16 +36,28 @@ class LogSentEmail
             'resend_note' => EmailLogHeaders::getString($message, EmailLogHeaders::RESEND_NOTE),
         ];
 
-        if ($attributes['message_id']) {
-            EmailLog::query()->updateOrCreate(
-                ['message_id' => $attributes['message_id']],
-                $attributes,
-            );
-
-            return;
+        if (EmailLogTenancy::enabled()) {
+            $attributes[EmailLogTenancy::column()] = $this->resolveTenantKey($message);
         }
 
-        EmailLog::query()->create($attributes);
+        $emailLog = filled($attributes['message_id'])
+            ? EmailLog::query()->firstOrNew(['message_id' => $attributes['message_id']])
+            : new EmailLog;
+
+        // forceFill keeps the package working even when the tenant column has
+        // been renamed (and therefore is not in the model's $fillable list).
+        $emailLog->forceFill($attributes)->save();
+    }
+
+    protected function resolveTenantKey(Email $message): int|string|null
+    {
+        $fromHeader = EmailLogHeaders::getScalar($message, EmailLogHeaders::TENANT_ID);
+
+        if ($fromHeader !== null) {
+            return $fromHeader;
+        }
+
+        return EmailLogTenancy::resolveCurrentKey();
     }
 
     /**
